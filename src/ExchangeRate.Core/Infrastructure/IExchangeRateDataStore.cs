@@ -12,6 +12,7 @@ namespace ExchangeRate.Core.Infrastructure;
 /// Abstraction for exchange rate data persistence.
 /// This interface abstracts the database context to allow the repository to be tested
 /// and used without a concrete Entity Framework dependency.
+/// ready
 /// </summary>
 public interface IExchangeRateDataStore
 {
