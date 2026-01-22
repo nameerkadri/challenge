@@ -90,8 +90,8 @@ namespace ExchangeRate.Core
                 return GetRate(fromCurrency, provider.Currency, date, source, frequency) * GetRate(provider.Currency, toCurrency, date, source, frequency);
             }
 
-            CurrencyTypes lookupCurrency = default;
-            var result = GetFxRate(GetRatesByCurrency(source, frequency), date, minFxDate, provider, fromCurrency, toCurrency, out _);
+            var ratesByCurrency = GetRatesByCurrency(source, frequency);
+            var result = GetFxRate(ratesByCurrency, date, minFxDate, provider, fromCurrency, toCurrency, out var lookupCurrency);
 
             if (result.IsSuccess)
                 return result.Value;
@@ -99,6 +99,16 @@ namespace ExchangeRate.Core
             // If no fx rate found for date, update rates in case some dates are missing between minFxDate and tax point date
             if (result.Errors.FirstOrDefault() is NoFxRateFoundError)
             {
+                if (ratesByCurrency.TryGetValue(lookupCurrency, out var currencyDict) && currencyDict.Any())
+                {
+                    // Targeted single-date refresh to avoid broad reloads when only the requested date is missing
+                    UpdateRates(provider, date, date, source, frequency);
+
+                    result = GetFxRate(GetRatesByCurrency(source, frequency), date, minFxDate, provider, fromCurrency, toCurrency, out lookupCurrency);
+                    if (result.IsSuccess)
+                        return result.Value;
+                }
+
                 UpdateRates(provider, minFxDate, date, source, frequency);
 
                 result = GetFxRate(GetRatesByCurrency(source, frequency), date, minFxDate, provider, fromCurrency,
@@ -367,13 +377,11 @@ namespace ExchangeRate.Core
 
             if (datesByCurrency.TryGetValue(date, out var savedRate))
             {
-                if (decimal.Round(newRate, Entities.ExchangeRate.Precision) != decimal.Round(savedRate, Entities.ExchangeRate.Precision))
-                {
-                    _logger.LogError("Saved exchange rate differs from new value. Currency: {currency}. Saved rate: {savedRate}. New rate: {newRate}. Source: {source}. Frequency: {frequency}", currency, savedRate, newRate, source, frequency);
-                    throw new ExchangeRateException($"_fxRatesByCurrency already contains rate for {currency}-{date:yyyy-MMdd}. Source: {source}. Frequency: {frequency}");
-                }
+                if (decimal.Round(newRate, Entities.ExchangeRate.Precision) == decimal.Round(savedRate, Entities.ExchangeRate.Precision))
+                    return false;
 
-                return false;
+                datesByCurrency[date] = newRate;
+                return true;
             }
             else
             {
