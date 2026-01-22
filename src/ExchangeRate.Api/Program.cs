@@ -116,16 +116,16 @@ namespace ExchangeRate.Api.Infrastructure
         {
             foreach (var rate in rates)
             {
-                var existingRate = _exchangeRates.FirstOrDefault(r =>
+                var existingRateIndex = _exchangeRates.FindIndex(r =>
                     r.Date == rate.Date &&
                     r.CurrencyId == rate.CurrencyId &&
                     r.Source == rate.Source &&
                     r.Frequency == rate.Frequency);
 
-                if (existingRate == null)
-                {
+                if (existingRateIndex >= 0)
+                    _exchangeRates[existingRateIndex] = rate;
+                else
                     _exchangeRates.Add(rate);
-                }
             }
 
             return Task.CompletedTask;

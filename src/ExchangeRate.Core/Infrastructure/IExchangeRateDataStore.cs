@@ -32,7 +32,7 @@ public interface IExchangeRateDataStore
     /// <summary>
     /// Saves multiple exchange rates to the data store.
     /// If a rate already exists for the same date/currency/source/frequency combination,
-    /// it should be updated or ignored based on implementation.
+    /// it should be replaced (upsert).
     /// </summary>
     /// <param name="rates">Exchange rates to save</param>
     Task SaveExchangeRatesAsync(IEnumerable<Entities.ExchangeRate> rates);
